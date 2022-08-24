@@ -13,6 +13,7 @@ let v = 0.05;
 let isDown = false;
 let isLeft = false;
 let isRight = false;
+let isBreaking = false;
 let isUp = false;
 let houses = [13, 16];
 let stores = [20];
@@ -96,6 +97,7 @@ function setup() {
     maxForce: 0.005,
     maxBreaking: 0.03,
     maxTurnRate: 0.0065,
+    breakingOffset: 0,
     currentPedal: 0,
     storeLocation: [],
     pizzaStorage: [],
@@ -139,21 +141,41 @@ function setup() {
         pedalPercent = 0.01;
       }
       if (isLeft) {
-        this.angle -= 0.05 + this.maxTurnRate * pedalPercent;
+        this.angle -=
+          0.05 + this.maxTurnRate + this.breakingOffset * pedalPercent;
         if (this.angle < 0) {
           this.angle = PI * 2;
         }
       }
       if (isRight) {
-        this.angle += 0.05 + this.maxTurnRate * pedalPercent;
+        this.angle +=
+          0.05 + this.maxTurnRate + this.breakingOffset * pedalPercent;
         if (this.angle > PI * 2) {
           this.angle = 0;
         }
       }
+      if (isBreaking) {
+        this.breakingOffset = 0.025;
+        if (this.currentPedal > 0) {
+          this.currentPedal -= this.maxBreaking / 8;
+          if (this.currentPedal < 0) {
+            this.currentPedal = 0;
+          }
+        }
+      }
+      if (!isBreaking) {
+        this.breakingOffset = 0;
+      }
+
       // console.log(this.angle);
       //add the curent speed and the current angle to the velocity
+      // let targetX = this.currentPedal * cos(this.angle);
+      // let targetY = this.currentPedal * sin(this.angle);
+
       this.velocity.x = this.currentPedal * cos(this.angle);
       this.velocity.y = this.currentPedal * sin(this.angle);
+      //adjust the velocity to the target velocity at max rate
+
       this.setPizzaDirection();
       console.log(this.x, this.y);
       if (
@@ -736,6 +758,8 @@ function setMove(k, b) {
         pizzaCar.position.x = pizzaCar.storeLocation[1] + 0.5;
         pizzaCar.position.y = pizzaCar.storeLocation[0] + 1.5;
         pizzaCar.angle = PI / 2;
+      } else {
+        return (isBreaking = b);
       }
     default:
       return b;

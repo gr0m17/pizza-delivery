@@ -9,6 +9,7 @@ const NUMOFTILES = 20;
 let d;
 let gpsArrow;
 let storeArrow;
+let storeReturn;
 let v = 0.05;
 let isDown = false;
 let isLeft = false;
@@ -103,6 +104,48 @@ function setup() {
     pizzaStorage: [],
     deliveryTracker: [],
     spwanedAtStore: false,
+    displayStatus: function () {
+      let x_screen = x_start + ((this.x - this.y) * TILE_WIDTH) / 2;
+      let y_screen = y_start + ((this.x + this.y) * TILE_HEIGHT) / 2;
+      let z_offset = MAX_HEIGHT;
+
+      fill(0, 0, 0);
+      strokeWeight(2);
+      text(
+        "total deliveries: " + this.deliveryTracker.length,
+        x_screen + 10,
+        y_screen + z_offset - 108 - 20
+      );
+      strokeWeight(1);
+      if (this.deliveryTracker.length > 0) {
+        let total = 0;
+        let lateIndicatior = "";
+        for (let i = 0; i < this.deliveryTracker.length; i++) {
+          if (this.deliveryTracker[i].dead) {
+            lateIndicatior = "LATE";
+          } else {
+            lateIndicatior = "";
+          }
+          text(
+            "Delivery #" +
+              (i + 1) +
+              " " +
+              lateIndicatior +
+              " value:" +
+              (this.deliveryTracker[i].value / 100).toFixed(2),
+            x_screen + 10,
+            y_screen + z_offset - 108 + i * 10 + 10
+          );
+
+          total += this.deliveryTracker[i].value;
+        }
+        // text(
+        //   "Total value: " + total.toFixed(2),
+        //   x_screen + 10,
+        //   y_screen + z_offset - 108 + (this.deliveryTracker.length + 2) * 10
+        // );
+      }
+    },
     update: function () {
       this.velocity.add(this.acceleration);
       this.velocity.limit(this.maxSpeed);
@@ -117,7 +160,7 @@ function setup() {
         //increase the current speed by the acceleration rate
         if (this.currentPedal < this.maxSpeed) {
           this.currentPedal += this.maxForce;
-          console.log(this.currentPedal);
+          // console.log(this.currentPedal);
         }
       }
       if (isDown) {
@@ -127,7 +170,7 @@ function setup() {
           if (this.currentPedal < 0) {
             this.currentPedal = 0;
           }
-          console.log(this.currentPedal);
+          // console.log(this.currentPedal);
         }
         // console.log(newX, newY);
 
@@ -177,7 +220,7 @@ function setup() {
       //adjust the velocity to the target velocity at max rate
 
       this.setPizzaDirection();
-      console.log(this.x, this.y);
+      // console.log(this.x, this.y);
       if (
         this.x + this.y * GRID_SIZE >= GRID_SIZE * GRID_SIZE ||
         this.x < 0 ||
@@ -296,6 +339,8 @@ function setup() {
   createCanvas(600, 400);
   gpsArrow = loadImage("tiles/arrow_003.png");
   storeArrow = loadImage("tiles/arrow_004.png");
+  markerLocation = loadImage("tiles/tile-21.png");
+  storeReturn = loadImage("tiles/store_return_001.png");
   for (let i = 0; i <= NUMOFTILES; i++) {
     tile_images.push(loadImage("./tiles/tile-" + i + ".png"));
   }
@@ -360,7 +405,10 @@ function draw() {
     let y_screen = y_start + ((pizzaCar.x + pizzaCar.y) * TILE_HEIGHT) / 2;
     let z_offset = MAX_HEIGHT;
     push();
-    rect(x_screen + pizzaCar.xOffset, y_screen + pizzaCar.yOffset, 200, 100);
+    fill(255);
+    rect(x_screen, y_screen - 140, 200, 300);
+    pizzaCar.displayStatus();
+    fill(0);
     textSize(20);
     text(
       "Game Over",
@@ -368,8 +416,17 @@ function draw() {
       y_screen + pizzaCar.yOffset + 25
     );
     textSize(12);
+    let finalScore = 0;
+    if (pizzaCar.deliveryTracker.length > 0) {
+      for (let i = 0; i < pizzaCar.deliveryTracker.length; i++) {
+        finalScore += pizzaCar.deliveryTracker[i].value;
+      }
+    } else {
+      finalScore = 0;
+    }
     text(
-      "  You crashed! \n your car is dead.",
+      "  You crashed! \n your car is dead.\n Final Score:" +
+        (finalScore / 100).toFixed(2),
       x_screen + pizzaCar.xOffset + 50,
       y_screen + pizzaCar.yOffset + 50
     );
@@ -385,8 +442,8 @@ function pizzaObjective() {
   let storeX = pizzaCar.storeLocation[1];
 
   let distance = dist(carX, carY, storeX, storeY);
-  console.log(storeX, storeY);
-  console.log(distance);
+  // console.log(storeX, storeY);
+  // console.log(distance);
   if (distance < 0.75) {
     if (pizzaCar.pizzaStorage.length == 0) {
       pizzaCar.pizzaStorage.push(
@@ -394,10 +451,10 @@ function pizzaObjective() {
       );
       console.log("pizza added");
     }
-    console.log(
-      pizzaCar.pizzaStorage[0].house.x,
-      pizzaCar.pizzaStorage[0].house.y
-    );
+    // console.log(
+    //   pizzaCar.pizzaStorage[0].house.x,
+    //   pizzaCar.pizzaStorage[0].house.y
+    // );
   }
   if (pizzaCar.pizzaStorage.length > 0) {
     pizzaCar.pizzaStorage[0].update();
@@ -415,6 +472,18 @@ function draw_roof(i, j, type = "house") {
   y_start = 10;
 
   draw_tile(tile_images[roofNumber], j, i, -42);
+}
+function drawDeliveryMarker() {
+  if (pizzaCar.pizzaStorage.length > 0) {
+    let x = pizzaCar.pizzaStorage[0].house.x + 0.4;
+    let y = pizzaCar.pizzaStorage[0].house.y + 1.2;
+    draw_tile(markerLocation, x, y, -42);
+  }
+  if (pizzaCar.pizzaStorage.length == 0) {
+    let x = pizzaCar.storeLocation[1] + 0.4;
+    let y = pizzaCar.storeLocation[0] + 1.4;
+    draw_tile(storeReturn, x, y, -42);
+  }
 }
 function drawPizzaCar(x, y) {
   draw_tile(
@@ -448,11 +517,35 @@ function drawPizzaCar(x, y) {
       x_screen + 80,
       y_screen + z_offset - 90
     );
-    //draw the arrow to the store
+    //draw a rectangle to show the delivery time remaining
+    push();
+    fill(255, 0, 0);
+    rect(
+      x_screen + 80,
+      y_screen + z_offset - 108,
+      ((pizzaCar.pizzaStorage[0].timerStart.toFixed(2) % 2000) / 2000) * 100,
+      10
+    );
+    fill(255, 255, 255);
+    rect(
+      x_screen + 80,
+      y_screen + z_offset - 108,
+      ((pizzaCar.pizzaStorage[0].timer.toFixed(2) % 2000) / 2000) * 100,
+      10
+    );
+    fill(255, 0, 0);
+    text(
+      pizzaCar.pizzaStorage[0].timer.toFixed(0) + " time remaining",
+      x_screen + 80,
+      y_screen + z_offset - 100
+    );
+    pop();
   }
 
   //calculate the angle from the pizzacar to the delivery house
   if (pizzaCar.pizzaStorage[0] != undefined) {
+    //draw markerLocation on the driveway +1 y  and +0 x from the delivery house
+
     let angle = atan2(
       y - (pizzaCar.pizzaStorage[0].house.y + 1.5),
       x - (pizzaCar.pizzaStorage[0].house.x + 0.8)
@@ -483,6 +576,7 @@ function drawPizzaCar(x, y) {
 
     pop();
   }
+  drawDeliveryMarker();
 }
 function generateMap() {
   let tiles = [];
@@ -758,6 +852,7 @@ function setMove(k, b) {
         pizzaCar.position.x = pizzaCar.storeLocation[1] + 0.5;
         pizzaCar.position.y = pizzaCar.storeLocation[0] + 1.5;
         pizzaCar.angle = PI / 2;
+        pizzaCar.deliveryTracker = [];
       } else {
         return (isBreaking = b);
       }

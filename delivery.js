@@ -29,7 +29,8 @@ class Delivery {
     //if the pizzaCar is at the house.x and house.y +1, then deliver the pizza
     if (
       floor(this.pizzaCar.x) == this.house.x &&
-      floor(this.pizzaCar.y) == this.house.y + 1
+      floor(this.pizzaCar.y) == this.house.y + 1 &&
+      this.pizzaCar.stopped == true
     ) {
       // if (
       //   this.pizzaCar.position.x >= this.house.x &&

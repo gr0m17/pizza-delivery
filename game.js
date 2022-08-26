@@ -94,16 +94,17 @@ function setup() {
     position: createVector(0, 0),
     velocity: createVector(0, 0),
     acceleration: createVector(0, 0),
-    maxSpeed: 0.115,
-    maxForce: 0.005,
+    maxSpeed: 0.055,
+    maxForce: 0.003,
     maxBreaking: 0.03,
-    maxTurnRate: 0.0065,
+    maxTurnRate: 0.09,
     breakingOffset: 0,
     currentPedal: 0,
     storeLocation: [],
     pizzaStorage: [],
     deliveryTracker: [],
     spwanedAtStore: false,
+    stopped: false,
     displayStatus: function () {
       let x_screen = x_start + ((this.x - this.y) * TILE_WIDTH) / 2;
       let y_screen = y_start + ((this.x + this.y) * TILE_HEIGHT) / 2;
@@ -150,10 +151,17 @@ function setup() {
       this.velocity.add(this.acceleration);
       this.velocity.limit(this.maxSpeed);
       this.position.add(this.velocity);
+      this.velocity.mult(0.7);
       this.acceleration.mult(0);
       this.x = this.position.x;
       this.y = this.position.y;
       this.currentPedal *= 0.9;
+      //if the car is stopped, set this.stopped to true
+      if (this.velocity.mag() < 0.01) {
+        this.stopped = true;
+      } else {
+        this.stopped = false;
+      }
     },
     movePizzaCar() {
       if (isUp) {
@@ -169,6 +177,8 @@ function setup() {
           this.currentPedal -= this.maxBreaking;
           if (this.currentPedal < 0) {
             this.currentPedal = 0;
+            //stop the car
+            this.velocity.mult(0.15);
           }
           // console.log(this.currentPedal);
         }
@@ -185,22 +195,24 @@ function setup() {
       }
       if (isLeft) {
         this.angle -=
-          0.05 + this.maxTurnRate + this.breakingOffset * pedalPercent;
+          // 0.05 +
+          this.maxTurnRate + this.breakingOffset * pedalPercent;
         if (this.angle < 0) {
           this.angle = PI * 2;
         }
       }
       if (isRight) {
         this.angle +=
-          0.05 + this.maxTurnRate + this.breakingOffset * pedalPercent;
+          // 0.05 +
+          this.maxTurnRate + this.breakingOffset * pedalPercent;
         if (this.angle > PI * 2) {
           this.angle = 0;
         }
       }
       if (isBreaking) {
-        this.breakingOffset = 0.025;
+        this.breakingOffset = 0.009 * pedalPercent;
         if (this.currentPedal > 0) {
-          this.currentPedal -= this.maxBreaking / 8;
+          this.currentPedal -= this.maxBreaking / 6;
           if (this.currentPedal < 0) {
             this.currentPedal = 0;
           }
@@ -214,9 +226,22 @@ function setup() {
       //add the curent speed and the current angle to the velocity
       // let targetX = this.currentPedal * cos(this.angle);
       // let targetY = this.currentPedal * sin(this.angle);
+      let slideX = this.currentPedal * cos(this.angle);
+      let slideY = this.currentPedal * sin(this.angle);
 
-      this.velocity.x = this.currentPedal * cos(this.angle);
-      this.velocity.y = this.currentPedal * sin(this.angle);
+      //if the turn is too big, the car will slide
+      if (abs(slideX) > this.maxSpeed) {
+        slideX = this.maxSpeed * cos(this.angle);
+      }
+      if (abs(slideY) > this.maxSpeed) {
+        slideY = this.maxSpeed * sin(this.angle);
+      }
+      this.acceleration.x = slideX;
+      this.acceleration.y = slideY;
+      // this.velocity.limit(this.maxSpeed);
+
+      // this.velocity.x = this.currentPedal * cos(this.angle);
+      // this.velocity.y = this.currentPedal * sin(this.angle);
       //adjust the velocity to the target velocity at max rate
 
       this.setPizzaDirection();
@@ -444,7 +469,12 @@ function pizzaObjective() {
   let distance = dist(carX, carY, storeX, storeY);
   // console.log(storeX, storeY);
   // console.log(distance);
-  if (distance < 0.75) {
+
+  if (
+    floor(pizzaCar.x) == storeX &&
+    floor(pizzaCar.y) == storeY &&
+    pizzaCar.stopped == true
+  ) {
     if (pizzaCar.pizzaStorage.length == 0) {
       pizzaCar.pizzaStorage.push(
         new Delivery(storeX, storeY, deliveryHouses, pizzaCar)
